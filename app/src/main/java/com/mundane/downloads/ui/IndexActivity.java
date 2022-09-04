@@ -145,7 +145,6 @@ public class IndexActivity extends AppCompatActivity {
                     return;
                 }
                 int awemeType = ParseUtil.getAwemeType(jsonStr);
-                System.out.println("awesomeType = " + awemeType);
                 if (awemeType == 4) {
                     Video video = ParseUtil.getVideo(jsonStr, videoId);
                     if (video == null) {

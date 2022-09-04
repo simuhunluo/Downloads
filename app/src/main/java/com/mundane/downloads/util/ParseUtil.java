@@ -47,7 +47,6 @@ public class ParseUtil {
         try {
             Document document = Jsoup.connect(url).headers(headers).get();
             String location = document.location();
-            System.out.println("localtion = " + location);
             String regex = "\\d+";
             Pattern pattern = Pattern.compile(regex);
             Matcher matcher = pattern.matcher(location);
@@ -62,7 +61,6 @@ public class ParseUtil {
     }
     
     public static String getJsonStr(String url) {
-        System.out.println("json url = " + url);
         try {
             String body = Jsoup.connect(url).ignoreContentType(true).execute().body();
             return body;
@@ -78,7 +76,6 @@ public class ParseUtil {
         Integer width = json.getJSONArray("item_list").getJSONObject(0).getJSONObject("video").getInt("width");
         Integer height = json.getJSONArray("item_list").getJSONObject(0).getJSONObject("video").getInt("height");
         if (videoAddress == null) {
-            System.out.println("videoAddress is null");
             return null;
         }
         videoAddress = videoAddress.replace("playwm", "play");
@@ -106,7 +103,6 @@ public class ParseUtil {
     }
     
     private static boolean download(String videoAddress, String desc) {
-        System.out.println("videoAddress = " + videoAddress);
         try {
             Connection.Response document = Jsoup.connect(videoAddress).ignoreContentType(true).maxBodySize(30000000).timeout(10000).execute();
             BufferedInputStream intputStream = document.bodyStream();
@@ -132,11 +128,9 @@ public class ParseUtil {
                 fs.write(buffer, 0, byteRead);
                 count += byteRead;
                 int progress = (int) (count * 100.0 / contentLength);
-                System.out.println("progress = " + progress + "%");
             }
             intputStream.close();
             fs.close();
-            System.out.println("\n-----视频保存路径-----\n" + fileSavePath.getAbsolutePath());
             return true;
         } catch (IOException e) {
             e.printStackTrace();
@@ -173,7 +167,6 @@ public class ParseUtil {
                     .timeout(30000)
                     .execute();
             contentLength = Integer.parseInt(document.header("Content-Length"));
-            System.out.println("contentLength = " + contentLength);
             return contentLength;
         } catch (IOException e) {
             e.printStackTrace();
