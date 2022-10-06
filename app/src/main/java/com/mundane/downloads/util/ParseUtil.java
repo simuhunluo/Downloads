@@ -32,6 +32,12 @@ public class ParseUtil {
         put("sec-ch-ua-platform", "\"Windows\"");
     }};
     
+    public static Map<String, String> PC_HEADERS = new HashMap<String, String>() {{
+        put("sec-ch-ua-platform", "macOS");
+        put("sec-ch-ua-mobile", "?0");
+        put("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36");
+    }};
+    
     public static String parseUrl(String text) {
         String regex = "https://v.douyin.com[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]";
         Pattern pattern = Pattern.compile(regex);
@@ -162,15 +168,32 @@ public class ParseUtil {
     public static int getContentLengthByAddress(String videoAddress) {
         int contentLength = 0;
         try {
-            Connection.Response document = Jsoup.connect(videoAddress)
-                    .ignoreContentType(true)
-                    .timeout(30000)
-                    .execute();
+            Connection.Response document = Jsoup.connect(videoAddress).ignoreContentType(true).timeout(30000).execute();
             contentLength = Integer.parseInt(document.header("Content-Length"));
             return contentLength;
         } catch (IOException e) {
             e.printStackTrace();
         }
         return contentLength;
+    }
+    
+    public static String getSecUid(String url) {
+        try {
+            Document document = Jsoup.connect(url).headers(headers).get();
+            String location = document.location();
+            String regex = "https://www.douyin.com/user/[-A-Za-z0-9+&@#/%=~_|!:,.;]+";
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(location);
+            if (matcher.find()) {
+                String secUrl = matcher.group();
+                return secUrl.replace("https://www.douyin.com/user/", "");
+            }
+            
+            String body = Jsoup.connect(location).headers(PC_HEADERS).ignoreContentType(true).execute().body();
+            System.out.println(body);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

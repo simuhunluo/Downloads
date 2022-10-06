@@ -49,6 +49,7 @@ public class IndexActivity extends AppCompatActivity {
     
     private static final int REQUEST_CODE = 100;
     private TextView mTvAbout;
+    private TextView mTvPatchDownload;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +57,7 @@ public class IndexActivity extends AppCompatActivity {
         setContentView(R.layout.activity_index);
         mTvDownload = findViewById(R.id.tv_download);
         mTvAbout = findViewById(R.id.tv_about);
+        mTvPatchDownload = findViewById(R.id.tv_patch_download);
         mTvDownload.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -68,8 +70,19 @@ public class IndexActivity extends AppCompatActivity {
                 openAbout();
             }
         });
+        mTvPatchDownload.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                patchDownload();
+            }
+        });
         
         checkPermission();
+    }
+    
+    private void patchDownload() {
+        Intent intent = new Intent(this, PatchDownloadActivity.class);
+        startActivity(intent);
     }
     
     private void openAbout() {

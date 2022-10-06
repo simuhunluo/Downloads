@@ -89,6 +89,32 @@
             app:contentPadding="10dp"
             >
 
+            <TextView
+                android:id="@+id/tv_patch_download"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:layout_marginRight="10dp"
+                android:gravity="center"
+                android:text="主页批量"
+                android:textColor="#ECE7E7"
+                android:textSize="24sp"
+                />
+
+        </android.support.v7.widget.CardView>
+
+        <android.support.v7.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp"
+            android:gravity="center"
+            android:orientation="vertical"
+            app:cardBackgroundColor="#17AAE2"
+            app:cardCornerRadius="2dp"
+            app:cardElevation="2dp"
+            app:contentPadding="10dp"
+            >
+
         <TextView
             android:id="@+id/tv_about"
             android:layout_width="match_parent"
