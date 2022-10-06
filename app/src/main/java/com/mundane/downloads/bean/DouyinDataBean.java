@@ -9,6 +9,8 @@ import java.io.Serializable;
  * @date 2022-10-05
  */
 public class DouyinDataBean implements Serializable {
+    // 布局类型
+    public int type;
     
     // 封面的图片地址
     public String coverUrl;

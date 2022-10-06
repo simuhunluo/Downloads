@@ -28,8 +28,7 @@ public class PatchDownloadActivity extends AppCompatActivity {
     private EditText mEtUserPage;
     private LoadingDialogFragment mLoadingDialogFragment;
     
-    private static final String LIST_URL_PREFIX = "https://www.iesdouyin.com/web/api/v2/aweme/post/?reflow_source=reflow_page&sec_uid=";
-    private static final String JSON_INFO = "JSON_INFO";
+    private static final String SEC_UID = "JSON_INFO";
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,13 +80,7 @@ public class PatchDownloadActivity extends AppCompatActivity {
                     e.onError(new MyException("secUid is null"));
                     return;
                 }
-                String listUrl = LIST_URL_PREFIX + secUid + "&count=21&max_cursor=0";
-                String listJsonStr = ParseUtil.getJsonStr(listUrl);
-                if (listJsonStr == null) {
-                    System.out.println("jsonStr is null");
-                    return;
-                }
-                e.onNext(listJsonStr);
+                e.onNext(secUid);
                 e.onComplete();
             }
         }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(new Observer<String>() {
@@ -101,10 +94,10 @@ public class PatchDownloadActivity extends AppCompatActivity {
             }
             
             @Override
-            public void onNext(String jsonStr) {
+            public void onNext(String secUid) {
                 LogUtils.d("currentThread = " + Thread.currentThread().getName());
                 // “主线程”执行的方法
-                openList(jsonStr);
+                openList(secUid);
             }
             
             @Override
@@ -123,15 +116,15 @@ public class PatchDownloadActivity extends AppCompatActivity {
         });
     }
     
-    private void openList(String jsonStr) {
+    private void openList(String secUid) {
         Intent intent = new Intent(this, JsonListActivity.class);
-        intent.putExtra(JSON_INFO, jsonStr);
+        intent.putExtra(SEC_UID, secUid);
         startActivity(intent);
     }
     
-    public static String getJsonInfoFromIntent(Intent intent) {
-        String jsonStr = (String) intent.getSerializableExtra(JSON_INFO);
-        return jsonStr;
+    public static String getSecUidFromIntent(Intent intent) {
+        String secUid = (String) intent.getSerializableExtra(SEC_UID);
+        return secUid;
     }
     
     private void hideDialog() {
