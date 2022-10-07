@@ -2,10 +2,11 @@ package com.mundane.downloads.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.SimpleItemAnimator;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import com.mundane.downloads.R;
@@ -49,6 +50,8 @@ public class JsonListActivity extends AppCompatActivity {
     
     private boolean isLoading = false;
     
+    private Handler mHandler = new Handler();
+    
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -62,7 +65,8 @@ public class JsonListActivity extends AppCompatActivity {
         }
         mSecUid = secUid;
         mMaxCursorSet.add("0");
-        mRv.setLayoutManager(new GridLayoutManager(this, 3));
+        GridLayoutManager layoutManager = new GridLayoutManager(this, 3);
+        mRv.setLayoutManager(layoutManager);
         mListRvAdapter = new ListRvAdapter(mDataList);
         mListRvAdapter.setOnItemClickListener(new OnItemClickListener() {
             @Override
@@ -84,10 +88,60 @@ public class JsonListActivity extends AppCompatActivity {
                 fetchData();
             }
         });
-        ((SimpleItemAnimator) mRv.getItemAnimator()).setSupportsChangeAnimations(false);
-        mRv.setFocusableInTouchMode(false);
         mRv.setHasFixedSize(true);
-        fetchData();
+        // 请求第一页数据
+        fetchUntilFillScreen();
+    }
+    
+    // 一直请求知道填满屏幕或者到最后一页
+    private void fetchUntilFillScreen() {
+        if (isLoading) {
+            return;
+        }
+        Observable.create(new ObservableOnSubscribe<String>() {
+            @Override
+            public void subscribe(ObservableEmitter<String> e) throws Exception {
+                LogUtils.d("currentThread = " + Thread.currentThread().getName());
+                //1、“异步线程” 执行耗时操作
+                //2、“执行完毕” 调用onNext触发回调，通知观察者
+                String listUrl = LIST_URL_PREFIX + mSecUid + "&count=21&max_cursor=" + mMaxCursor;
+                String listJsonStr = ParseUtil.getJsonStr(listUrl);
+                if (listJsonStr == null) {
+                    e.onError(new MyException("listJsonStr is null"));
+                    return;
+                }
+                e.onNext(listJsonStr);
+                e.onComplete();
+            }
+        }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(new Observer<String>() {
+            @Override
+            public void onSubscribe(Disposable d) {
+                // 订阅线程  订阅的那一刻在订阅线程中执行
+                LogUtils.d("currentThread = " + Thread.currentThread().getName());
+                isLoading = true;
+            }
+        
+            @Override
+            public void onNext(String jsonStr) {
+                LogUtils.d("currentThread = " + Thread.currentThread().getName());
+                // “主线程”执行的方法
+                addDataToListUntilFillScreen(jsonStr);
+            }
+        
+            @Override
+            public void onError(Throwable e) {
+                // "主线程"执行的方法
+                e.printStackTrace();
+                isLoading = false;
+            }
+        
+            @Override
+            public void onComplete() {
+                // "主线程"执行的方法
+                LogUtils.d("onComplete");
+                isLoading = false;
+            }
+        });
     }
     
     private void fetchData() {
@@ -137,7 +191,7 @@ public class JsonListActivity extends AppCompatActivity {
         });
     }
     
-    private void addDataToList(String jsonStr) {
+    private void addDataToListUntilFillScreen(String jsonStr) {
         JSONObject json = new JSONObject(jsonStr);
         mMaxCursor = json.getStr("max_cursor");
         LogUtils.d("max_cursor = " + mMaxCursor);
@@ -145,7 +199,52 @@ public class JsonListActivity extends AppCompatActivity {
         List<DouyinDataBean> dataList = new ArrayList<>();
         for (Object o : awemeList) {
             JSONObject jsonObject = (JSONObject) o;
-            JSONArray jsonArray = jsonObject.getJSONObject("video").getJSONObject("cover").getJSONArray("url_list");
+            JSONObject video = jsonObject.getJSONObject("video");
+            if (video == null) {
+                LogUtils.d("video is null");
+                continue;
+            }
+            JSONArray jsonArray = video.getJSONObject("cover").getJSONArray("url_list");
+            String coverUrl = jsonArray.get(0).toString();
+            String awemeId = jsonObject.getStr("aweme_id");
+            Integer awemeType = jsonObject.getInt("aweme_type");
+        
+            DouyinDataBean douyinDataBean = new DouyinDataBean();
+            douyinDataBean.coverUrl = coverUrl;
+            douyinDataBean.awemeId = awemeId;
+            douyinDataBean.awemeType = awemeType;
+            douyinDataBean.type = ListRvAdapter.TYPE_ITEM;
+            dataList.add(douyinDataBean);
+        }
+        int positionStart = mDataList.size();
+        mDataList.addAll(dataList);
+        mListRvAdapter.notifyItemRangeInserted(positionStart, dataList.size());
+    
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                // 判断是否滑动到了最后一个item
+                if (lastItemVisible() && !mMaxCursorSet.contains(mMaxCursor)) {
+                    fetchUntilFillScreen();
+                }
+            }
+        }, 1000);
+    }
+    
+    private void addDataToList(String jsonStr) {
+        JSONObject json = new JSONObject(jsonStr);
+        LogUtils.d("max_cursor = " + mMaxCursor);
+        mMaxCursor = json.getStr("max_cursor");
+        JSONArray awemeList = json.getJSONArray("aweme_list");
+        List<DouyinDataBean> dataList = new ArrayList<>();
+        for (Object o : awemeList) {
+            JSONObject jsonObject = (JSONObject) o;
+            JSONObject video = jsonObject.getJSONObject("video");
+            if (video == null) {
+                LogUtils.d("video is null");
+                continue;
+            }
+            JSONArray jsonArray = video.getJSONObject("cover").getJSONArray("url_list");
             String coverUrl = jsonArray.get(0).toString();
             String awemeId = jsonObject.getStr("aweme_id");
             Integer awemeType = jsonObject.getInt("aweme_type");
@@ -160,6 +259,21 @@ public class JsonListActivity extends AppCompatActivity {
         int positionStart = mDataList.size();
         mDataList.addAll(dataList);
         mListRvAdapter.notifyItemRangeInserted(positionStart, dataList.size());
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (mHandler != null) {
+            mHandler.removeCallbacksAndMessages(null);
+        }
+    }
+    
+    private boolean lastItemVisible() {
+        LinearLayoutManager manager = (LinearLayoutManager) mRv.getLayoutManager();
+        int lastItemPosition = manager.findLastCompletelyVisibleItemPosition();
+        int itemCount = manager.getItemCount();
+        return lastItemPosition == itemCount - 1;
     }
     
     private void openPlayVideo(DouyinDataBean bean) {
