@@ -223,7 +223,7 @@ public class IndexActivity extends AppCompatActivity {
     
     public void downloadPic(String videoId, int count, String picUrl) throws MyException {
         try {
-            Connection.Response document = Jsoup.connect(picUrl).ignoreContentType(true).maxBodySize(30000000).timeout(10000).execute();
+            Connection.Response document = Jsoup.connect(picUrl).ignoreContentType(true).maxBodySize(0).timeout(0).execute();
             BufferedInputStream intputStream = document.bodyStream();
             File appDir = new File(Environment.getExternalStorageDirectory() + File.separator + Environment.DIRECTORY_DCIM + File.separator + "Camera" + File.separator);
             if (!appDir.exists()) {
@@ -293,8 +293,8 @@ public class IndexActivity extends AppCompatActivity {
         try {
             Connection.Response document = Jsoup.connect(videoAddress)
                     .ignoreContentType(true)
-                    .maxBodySize(30000000)
-                    .timeout(30000)
+                    .maxBodySize(0)
+                    .timeout(0)
                     .execute();
             BufferedInputStream intputStream = document.bodyStream();
             int contentLength = Integer.parseInt(document.header("Content-Length"));
