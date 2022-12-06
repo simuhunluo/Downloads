@@ -15,6 +15,7 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.TextView;
 import com.mundane.downloads.R;
+import com.mundane.downloads.dto.Pic;
 import com.mundane.downloads.dto.Video;
 import com.mundane.downloads.exception.MyException;
 import com.mundane.downloads.ui.dialog.ProgressDialogFragment;
@@ -37,6 +38,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 
@@ -166,8 +169,8 @@ public class IndexActivity extends AppCompatActivity {
                     }
                     downloadVideo(video, e);
                 } else if (awemeType == 2) {
-                    List<String> picList = ParseUtil.getPicList(jsonStr);
-                    downloadPic(videoId, picList, e);
+                    Pic pic = ParseUtil.getPicList(jsonStr);
+                    downloadPic(pic, e);
                 }
             }
         }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(new Observer<Integer>() {
@@ -205,13 +208,14 @@ public class IndexActivity extends AppCompatActivity {
         });
     }
     
-    private void downloadPic(String videoId, List<String> picList, ObservableEmitter<Integer> observableEmitter) {
+    private void downloadPic(Pic pic, ObservableEmitter<Integer> observableEmitter) {
+        List<String> picList = pic.getPicList();
         Collections.reverse(picList);
         int size = picList.size();
         try {
             for (int index = 0; index < size; index++) {
                 int count = index + 1;
-                downloadPic(videoId, count, picList.get(index));
+                downloadPic(pic.getDesc(), count, picList.get(index));
                 int progress = (int) (count * 100.0 / size);
                 observableEmitter.onNext(progress);
             }
@@ -221,15 +225,19 @@ public class IndexActivity extends AppCompatActivity {
         observableEmitter.onComplete();
     }
     
-    public void downloadPic(String videoId, int count, String picUrl) throws MyException {
+    public void downloadPic(String title, int count, String picUrl) throws MyException {
         try {
+            Pattern pattern = Pattern.compile("[\\s\\\\/:\\*\\?\\\"<>\\|]");
+            Matcher matcher = pattern.matcher(title);
+            // 将匹配到的非法字符以空替换
+            title = matcher.replaceAll("");
             Connection.Response document = Jsoup.connect(picUrl).ignoreContentType(true).maxBodySize(0).timeout(0).execute();
             BufferedInputStream intputStream = document.bodyStream();
             File appDir = new File(Environment.getExternalStorageDirectory() + File.separator + Environment.DIRECTORY_DCIM + File.separator + "Camera" + File.separator);
             if (!appDir.exists()) {
                 appDir.mkdir();
             }
-            File fileSavePath = new File(appDir, videoId + "_" + count + ".png");
+            File fileSavePath = new File(appDir, title + "_" + count + ".png");
             // 如果保存文件夹不存在,那么则创建该文件夹
             File fileParent = fileSavePath.getParentFile();
             if (!fileParent.exists()) {
@@ -275,13 +283,13 @@ public class IndexActivity extends AppCompatActivity {
     
     public void downloadVideo(Video video, ObservableEmitter<Integer> observableEmitter) {
         String originVideoAddress = video.getVideoAddress();
-        String videoId = video.getVideoId();
+        String title = video.getDesc();
         String videoAddress1080 = originVideoAddress.replace("720p", "1080p");
         try {
             if (ParseUtil.getContentLengthByAddress(videoAddress1080) > ParseUtil.getContentLengthByAddress(originVideoAddress)) {
-                download(videoAddress1080, videoId, observableEmitter);
+                download(videoAddress1080, title, observableEmitter);
             } else {
-                download(originVideoAddress, videoId, observableEmitter);
+                download(originVideoAddress, title, observableEmitter);
             }
         } catch (MyException e1) {
             observableEmitter.onError(e1);
@@ -289,20 +297,21 @@ public class IndexActivity extends AppCompatActivity {
         observableEmitter.onComplete();
     }
     
-    private void download(String videoAddress, String videoId, ObservableEmitter<Integer> e) throws MyException {
+    private void download(String videoAddress, String title, ObservableEmitter<Integer> e) throws MyException {
         try {
-            Connection.Response document = Jsoup.connect(videoAddress)
-                    .ignoreContentType(true)
-                    .maxBodySize(0)
-                    .timeout(0)
-                    .execute();
+            
+            Pattern pattern = Pattern.compile("[\\s\\\\/:\\*\\?\\\"<>\\|]");
+            Matcher matcher = pattern.matcher(title);
+            // 将匹配到的非法字符以空替换
+            title = matcher.replaceAll("");
+            Connection.Response document = Jsoup.connect(videoAddress).ignoreContentType(true).maxBodySize(0).timeout(0).execute();
             BufferedInputStream intputStream = document.bodyStream();
             int contentLength = Integer.parseInt(document.header("Content-Length"));
             File appDir = new File(Environment.getExternalStorageDirectory() + File.separator + Environment.DIRECTORY_DCIM + File.separator + "Camera" + File.separator);
             if (!appDir.exists()) {
                 appDir.mkdir();
             }
-            File fileSavePath = new File(appDir, videoId + ".mp4");
+            File fileSavePath = new File(appDir, title + ".mp4");
             // 如果保存文件夹不存在,那么则创建该文件夹
             File fileParent = fileSavePath.getParentFile();
             if (!fileParent.exists()) {

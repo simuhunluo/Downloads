@@ -3,6 +3,7 @@ package com.mundane.downloads.util;
 import android.os.Environment;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
+import com.mundane.downloads.dto.Pic;
 import com.mundane.downloads.dto.Video;
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -152,17 +153,20 @@ public class ParseUtil {
         return awesomeType;
     }
     
-    public static List<String> getPicList(String jsonStr) {
+    public static Pic getPicList(String jsonStr) {
         List<String> picList = new ArrayList<>();
         
         JSONObject json = new JSONObject(jsonStr);
         JSONArray images = json.getJSONArray("item_list").getJSONObject(0).getJSONArray("images");
+        String desc = json.getJSONArray("item_list").getJSONObject(0).getStr("desc");
         for (int i = 0; i < images.size(); i++) {
             JSONObject jsonObject = images.getJSONObject(i);
             JSONArray urlList = jsonObject.getJSONArray("url_list");
             picList.add(urlList.get(0).toString());
         }
-        return picList;
+        Pic pic = new Pic(picList, desc);
+        
+        return pic;
     }
     
     public static int getContentLengthByAddress(String videoAddress) {

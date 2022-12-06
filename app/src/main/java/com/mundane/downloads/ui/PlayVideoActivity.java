@@ -26,6 +26,8 @@ import io.reactivex.schedulers.Schedulers;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 
@@ -166,13 +168,13 @@ public class PlayVideoActivity extends AppCompatActivity {
     
     public void downloadVideo(Video video, ObservableEmitter<Integer> observableEmitter) {
         String originVideoAddress = video.getVideoAddress();
-        String videoId = video.getVideoId();
+        String title = video.getDesc();
         String videoAddress1080 = originVideoAddress.replace("720p", "1080p");
         try {
             if (ParseUtil.getContentLengthByAddress(videoAddress1080) > ParseUtil.getContentLengthByAddress(originVideoAddress)) {
-                download(videoAddress1080, videoId, observableEmitter);
+                download(videoAddress1080, title, observableEmitter);
             } else {
-                download(originVideoAddress, videoId, observableEmitter);
+                download(originVideoAddress, title, observableEmitter);
             }
         } catch (MyException e1) {
             observableEmitter.onError(e1);
@@ -180,8 +182,12 @@ public class PlayVideoActivity extends AppCompatActivity {
         observableEmitter.onComplete();
     }
     
-    private void download(String videoAddress, String videoId, ObservableEmitter<Integer> e) throws MyException {
+    private void download(String videoAddress, String title, ObservableEmitter<Integer> e) throws MyException {
         try {
+            Pattern pattern = Pattern.compile("[\\s\\\\/:\\*\\?\\\"<>\\|]");
+            Matcher matcher = pattern.matcher(title);
+            // 将匹配到的非法字符以空替换
+            title = matcher.replaceAll("");
             Connection.Response document = Jsoup.connect(videoAddress).ignoreContentType(true).maxBodySize(30000000).timeout(30000).execute();
             BufferedInputStream intputStream = document.bodyStream();
             int contentLength = Integer.parseInt(document.header("Content-Length"));
@@ -189,7 +195,7 @@ public class PlayVideoActivity extends AppCompatActivity {
             if (!appDir.exists()) {
                 appDir.mkdir();
             }
-            File fileSavePath = new File(appDir, videoId + ".mp4");
+            File fileSavePath = new File(appDir, title + ".mp4");
             // 如果保存文件夹不存在,那么则创建该文件夹
             File fileParent = fileSavePath.getParentFile();
             if (!fileParent.exists()) {
