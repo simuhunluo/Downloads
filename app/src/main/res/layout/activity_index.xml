@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="#E4E4E4"
-    tools:context="com.mundane.downloads.ui.IndexActivity"
+    tools:context="com.mundane.downloads.ui.MainActivity"
     >
     <LinearLayout
         android:layout_width="match_parent"

@@ -11,6 +11,7 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.mundane.downloads.R;
 import com.mundane.downloads.bean.DouyinDataBean;
 import java.util.List;
@@ -70,7 +71,11 @@ public class ListRvAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             ListRvAdapterHolder itemHolder = (ListRvAdapterHolder) holder;
             DouyinDataBean bean = mDataList.get(position);
             ImageView ivCover = itemHolder.ivCover;
-            Glide.with(ivCover.getContext()).load(bean.coverUrl).fitCenter().into(ivCover);
+            Glide.with(ivCover.getContext())
+                    .load(bean.coverUrl)
+                    .diskCacheStrategy(DiskCacheStrategy.RESULT)
+                    .fitCenter()
+                    .into(ivCover);
             holder.itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {

@@ -17,6 +17,10 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
+        <activity android:name=".ui.PicListActivity">
+        </activity>
+        <activity android:name=".ui.WebViewActivity">
+        </activity>
         <activity
             android:name=".ui.PlayVideoActivity"
             android:configChanges="orientation|screenSize|keyboardHidden"
@@ -30,7 +34,7 @@
         </activity>
         <activity android:name=".ui.AboutMeActivity">
         </activity>
-        <activity android:name=".ui.IndexActivity">
+        <activity android:name=".ui.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 

@@ -1,6 +1,7 @@
 package com.mundane.downloads.bean;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * DouyinDataBean
@@ -15,12 +16,16 @@ public class DouyinDataBean implements Serializable {
     // 封面的图片地址
     public String coverUrl;
     
-    public String awemeId;
-    
+    // 0: 视频，68: 图片
     public Integer awemeType;
     
-    @Override
-    public String toString() {
-        return "DouyinDataBean{" + "coverUrl='" + coverUrl + '\'' + ", awemeId='" + awemeId + '\'' + ", awemeType=" + awemeType + '}';
-    }
+    // 无水印图片地址
+    public List<String> imageList;
+    
+    // 无水印视频地址
+    public String playApi;
+    
+    public String desc;
+    
+    
 }

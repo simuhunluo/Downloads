@@ -2,19 +2,17 @@ package com.mundane.downloads.ui;
 
 import android.os.Bundle;
 import android.os.Environment;
-import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.view.View.OnClickListener;
 import cn.jzvd.Jzvd;
 import cn.jzvd.JzvdStd;
 import com.mundane.downloads.R;
+import com.mundane.downloads.base.BaseActivity;
 import com.mundane.downloads.bean.DouyinDataBean;
-import com.mundane.downloads.dto.Video;
 import com.mundane.downloads.exception.MyException;
-import com.mundane.downloads.ui.dialog.LoadingDialogFragment;
 import com.mundane.downloads.util.LogUtils;
-import com.mundane.downloads.util.ParseUtil;
 import com.mundane.downloads.util.RefreshUtil;
+import com.mundane.downloads.util.RegexUtil;
 import com.mundane.downloads.util.T;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
@@ -26,21 +24,15 @@ import io.reactivex.schedulers.Schedulers;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 
-public class PlayVideoActivity extends AppCompatActivity {
+public class PlayVideoActivity extends BaseActivity {
     
-    private static final String PREFIX = "https://www.iesdouyin.com/web/api/v2/aweme/iteminfo/?item_ids=";
-    
-    private static final int TYPE_VIDEO = 4;
-    private static final int TYPE_PIC = 2;
     private JzvdStd mVideoView;
     
-    private LoadingDialogFragment mLoadingDialogFragment;
     private View mTvDownload;
+    
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,62 +45,11 @@ public class PlayVideoActivity extends AppCompatActivity {
         if (douyinData == null) {
             return;
         }
+        setUp(douyinData);
         mTvDownload.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (douyinData.awemeType == TYPE_VIDEO) {
-                    download(douyinData);
-                }
-            }
-        });
-        Observable.create(new ObservableOnSubscribe<Video>() {
-            @Override
-            public void subscribe(ObservableEmitter<Video> e) throws Exception {
-                LogUtils.d("currentThread = " + Thread.currentThread().getName());
-                //1、“异步线程” 执行耗时操作
-                //2、“执行完毕” 调用onNext触发回调，通知观察者
-                String url = PREFIX + douyinData.awemeId;
-                String videJsonStr = ParseUtil.getJsonStr(url);
-                if (videJsonStr == null) {
-                    e.onError(new MyException("videJsonStr is null"));
-                    return;
-                }
-                if (douyinData.awemeType == TYPE_VIDEO) {
-                    Video video = ParseUtil.getVideo(videJsonStr, douyinData.awemeId);
-                    if (video == null) {
-                        System.out.println("video is null");
-                        return;
-                    }
-                    e.onNext(video);
-                }
-                e.onComplete();
-            }
-        }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(new Observer<Video>() {
-            @Override
-            public void onSubscribe(Disposable d) {
-                // 订阅线程  订阅的那一刻在订阅线程中执行
-                LogUtils.d("currentThread = " + Thread.currentThread().getName());
-            }
-            
-            @Override
-            public void onNext(Video video) {
-                LogUtils.d("currentThread = " + Thread.currentThread().getName());
-                // “主线程”执行的方法
-                setUp(video);
-            }
-            
-            @Override
-            public void onError(Throwable e) {
-                // "主线程"执行的方法
-                e.printStackTrace();
-                hideDialog();
-            }
-            
-            @Override
-            public void onComplete() {
-                // "主线程"执行的方法
-                LogUtils.d("onComplete");
-                hideDialog();
+                download(douyinData);
             }
         });
     }
@@ -116,37 +57,28 @@ public class PlayVideoActivity extends AppCompatActivity {
     private void download(DouyinDataBean douyinData) {
         Observable.create(new ObservableOnSubscribe<Integer>() {
             @Override
-            public void subscribe(ObservableEmitter<Integer> e) throws Exception {
-                LogUtils.d("currentThread = " + Thread.currentThread().getName());
-                //1、“异步线程” 执行耗时操作
-                //2、“执行完毕” 调用onNext触发回调，通知观察者
-                String url = PREFIX + douyinData.awemeId;
-                String jsonStr = ParseUtil.getJsonStr(url);
-                if (jsonStr == null) {
-                    e.onError(new MyException("jsonStr is null"));
-                    return;
+            public void subscribe(ObservableEmitter<Integer> observableEmitter) throws Exception {
+                try {
+                    downloadVideo(douyinData, observableEmitter);
+                } catch (MyException exception) {
+                    observableEmitter.onError(exception);
                 }
-                int awemeType = ParseUtil.getAwemeType(jsonStr);
-                if (awemeType == 4) {
-                    Video video = ParseUtil.getVideo(jsonStr, douyinData.awemeId);
-                    if (video == null) {
-                        e.onError(new MyException("video is null"));
-                        return;
-                    }
-                    downloadVideo(video, e);
-                }
+                observableEmitter.onComplete();
             }
         }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(new Observer<Integer>() {
             @Override
             public void onSubscribe(Disposable d) {
                 // 订阅线程  订阅的那一刻在订阅线程中执行
                 LogUtils.d("currentThread = " + Thread.currentThread().getName());
-                showDialog();
+                if (mProgressDialogFragment == null) {
+                    createAndShowDialog();
+                }
             }
             
             @Override
             public void onNext(Integer progress) {
-                LogUtils.d("currentThread = " + Thread.currentThread().getName());
+                // “主线程”执行的方法
+                updateProgress(progress);
             }
             
             @Override
@@ -166,34 +98,17 @@ public class PlayVideoActivity extends AppCompatActivity {
         });
     }
     
-    public void downloadVideo(Video video, ObservableEmitter<Integer> observableEmitter) {
-        String originVideoAddress = video.getVideoAddress();
-        String title = video.getDesc();
-        String videoAddress1080 = originVideoAddress.replace("720p", "1080p");
+    private void downloadVideo(DouyinDataBean douyinData, ObservableEmitter<Integer> e) throws MyException {
+        String playApi = douyinData.playApi;
+        String title = RegexUtil.replaceTitle(douyinData.desc);
         try {
-            if (ParseUtil.getContentLengthByAddress(videoAddress1080) > ParseUtil.getContentLengthByAddress(originVideoAddress)) {
-                download(videoAddress1080, title, observableEmitter);
-            } else {
-                download(originVideoAddress, title, observableEmitter);
-            }
-        } catch (MyException e1) {
-            observableEmitter.onError(e1);
-        }
-        observableEmitter.onComplete();
-    }
-    
-    private void download(String videoAddress, String title, ObservableEmitter<Integer> e) throws MyException {
-        try {
-            Pattern pattern = Pattern.compile("[\\s\\\\/:\\*\\?\\\"<>\\|]");
-            Matcher matcher = pattern.matcher(title);
-            // 将匹配到的非法字符以空替换
-            title = matcher.replaceAll("");
-            Connection.Response document = Jsoup.connect(videoAddress).ignoreContentType(true).maxBodySize(30000000).timeout(30000).execute();
+            title = RegexUtil.replaceTitle(title);
+            Connection.Response document = Jsoup.connect(playApi).ignoreContentType(true).maxBodySize(0).timeout(0).execute();
             BufferedInputStream intputStream = document.bodyStream();
             int contentLength = Integer.parseInt(document.header("Content-Length"));
             File appDir = new File(Environment.getExternalStorageDirectory() + File.separator + Environment.DIRECTORY_DCIM + File.separator + "Camera" + File.separator);
             if (!appDir.exists()) {
-                appDir.mkdir();
+                appDir.mkdirs();
             }
             File fileSavePath = new File(appDir, title + ".mp4");
             // 如果保存文件夹不存在,那么则创建该文件夹
@@ -216,7 +131,7 @@ public class PlayVideoActivity extends AppCompatActivity {
             }
             intputStream.close();
             fs.close();
-            RefreshUtil.scanFile(PlayVideoActivity.this, fileSavePath.getAbsolutePath());
+            RefreshUtil.scanFile(this, fileSavePath.getAbsolutePath());
         } catch (Exception exception) {
             exception.printStackTrace();
             throw new MyException(exception.getMessage());
@@ -237,22 +152,9 @@ public class PlayVideoActivity extends AppCompatActivity {
         Jzvd.releaseAllVideos();
     }
     
-    private void setUp(Video video) {
-        mVideoView.setUp(video.getVideoAddress(), video.getDesc());
+    private void setUp(DouyinDataBean data) {
+        mVideoView.setUp(data.playApi, "");
         mVideoView.startVideoAfterPreloading();
     }
     
-    private void hideDialog() {
-        if (mLoadingDialogFragment != null) {
-            mLoadingDialogFragment.dismiss();
-        }
-    }
-    
-    private void showDialog() {
-        if (mLoadingDialogFragment == null) {
-            mLoadingDialogFragment = LoadingDialogFragment.newInstance();
-            mLoadingDialogFragment.setCancelable(false);
-        }
-        mLoadingDialogFragment.show(getSupportFragmentManager(), "");
-    }
 }

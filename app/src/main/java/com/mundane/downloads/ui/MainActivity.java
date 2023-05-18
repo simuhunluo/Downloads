@@ -10,19 +10,19 @@ import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.TextView;
+import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONObject;
 import com.mundane.downloads.R;
-import com.mundane.downloads.dto.Pic;
-import com.mundane.downloads.dto.Video;
+import com.mundane.downloads.base.BaseActivity;
 import com.mundane.downloads.exception.MyException;
-import com.mundane.downloads.ui.dialog.ProgressDialogFragment;
 import com.mundane.downloads.util.ClipUtil;
 import com.mundane.downloads.util.LogUtils;
 import com.mundane.downloads.util.ParseUtil;
 import com.mundane.downloads.util.RefreshUtil;
+import com.mundane.downloads.util.RegexUtil;
 import com.mundane.downloads.util.StringUtils;
 import com.mundane.downloads.util.T;
 import io.reactivex.Observable;
@@ -35,24 +35,21 @@ import io.reactivex.schedulers.Schedulers;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 
-public class IndexActivity extends AppCompatActivity {
+public class MainActivity extends BaseActivity {
     
     private TextView mTvDownload;
     
-    public static final String PREFIX = "https://www.iesdouyin.com/web/api/v2/aweme/iteminfo/?item_ids=";
-    private ProgressDialogFragment mProgressDialogFragment;
     
     private static final int REQUEST_CODE = 100;
     private TextView mTvAbout;
     private TextView mTvPatchDownload;
+    
+    public static final String VIDEO_URL = "https://www.douyin.com/video/";
+    
+    public static final String NOTE_URL = "https://www.douyin.com/note/";
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -148,29 +145,12 @@ public class IndexActivity extends AppCompatActivity {
                 //1、“异步线程” 执行耗时操作
                 //2、“执行完毕” 调用onNext触发回调，通知观察者
                 String url = ParseUtil.parseUrl(text);
-                String videoId = ParseUtil.parseVideoId(url);
-                if (videoId == null) {
-                    e.onError(new MyException("videoId is null"));
-                    return;
-                }
-                LogUtils.d("videoId = " + videoId);
-                url = PREFIX + videoId;
-                String jsonStr = ParseUtil.getJsonStr(url);
-                if (jsonStr == null) {
-                    e.onError(new MyException("jsonStr is null"));
-                    return;
-                }
-                int awemeType = ParseUtil.getAwemeType(jsonStr);
-                if (awemeType == 4) {
-                    Video video = ParseUtil.getVideo(jsonStr, videoId);
-                    if (video == null) {
-                        e.onError(new MyException("video is null"));
-                        return;
-                    }
-                    downloadVideo(video, e);
-                } else if (awemeType == 2) {
-                    Pic pic = ParseUtil.getPicList(jsonStr);
-                    downloadPic(pic, e);
+                String awesomeUrl = ParseUtil.getAwesomeUrl(url);
+                LogUtils.d("awesomeUrl = " + awesomeUrl);
+                if (awesomeUrl.startsWith(VIDEO_URL)) {
+                    downloadVideo(awesomeUrl, e);
+                } else if (awesomeUrl.startsWith(NOTE_URL)) {
+                    downloadNote(awesomeUrl, e);
                 }
             }
         }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(new Observer<Integer>() {
@@ -185,9 +165,7 @@ public class IndexActivity extends AppCompatActivity {
             
             @Override
             public void onNext(Integer progress) {
-                LogUtils.d("currentThread = " + Thread.currentThread().getName());
                 // “主线程”执行的方法
-                LogUtils.d("progress = " + progress);
                 updateProgress(progress);
             }
             
@@ -208,108 +186,67 @@ public class IndexActivity extends AppCompatActivity {
         });
     }
     
-    private void downloadPic(Pic pic, ObservableEmitter<Integer> observableEmitter) {
-        List<String> picList = pic.getPicList();
-        Collections.reverse(picList);
-        int size = picList.size();
+    private void downloadPic(JSONObject awesomeInfo, ObservableEmitter<Integer> observableEmitter) throws MyException {
+        JSONObject detail = awesomeInfo.getJSONObject("aweme").getJSONObject("detail");
+        String title = detail.getStr("desc");
+        JSONArray images = detail.getJSONArray("images");
+        
         try {
-            for (int index = 0; index < size; index++) {
+            for (int index = 0; index < images.size(); index++) {
                 int count = index + 1;
-                downloadPic(pic.getDesc(), count, picList.get(index));
-                int progress = (int) (count * 100.0 / size);
+                JSONObject image = (JSONObject) images.get(index);
+                JSONArray urlList = image.getJSONArray("urlList");
+                downloadPic(title, count, urlList.get(urlList.size() - 1).toString());
+                int progress = (int) (count * 100.0 / images.size());
                 observableEmitter.onNext(progress);
             }
-        } catch (MyException e1) {
-            observableEmitter.onError(e1);
-        }
-        observableEmitter.onComplete();
-    }
-    
-    public void downloadPic(String title, int count, String picUrl) throws MyException {
-        try {
-            Pattern pattern = Pattern.compile("[\\s\\\\/:\\*\\?\\\"<>\\|]");
-            Matcher matcher = pattern.matcher(title);
-            // 将匹配到的非法字符以空替换
-            title = matcher.replaceAll("");
-            Connection.Response document = Jsoup.connect(picUrl).ignoreContentType(true).maxBodySize(0).timeout(0).execute();
-            BufferedInputStream intputStream = document.bodyStream();
-            File appDir = new File(Environment.getExternalStorageDirectory() + File.separator + Environment.DIRECTORY_DCIM + File.separator + "Camera" + File.separator);
-            if (!appDir.exists()) {
-                appDir.mkdir();
-            }
-            File fileSavePath = new File(appDir, title + "_" + count + ".png");
-            // 如果保存文件夹不存在,那么则创建该文件夹
-            File fileParent = fileSavePath.getParentFile();
-            if (!fileParent.exists()) {
-                fileParent.mkdirs();
-            }
-            if (fileSavePath.exists()) { //如果文件存在，则删除原来的文件
-                fileSavePath.delete();
-            }
-            FileOutputStream fs = new FileOutputStream(fileSavePath);
-            byte[] buffer = new byte[8 * 1024];
-            int byteRead;
-            while ((byteRead = intputStream.read(buffer)) != -1) {
-                fs.write(buffer, 0, byteRead);
-            }
-            intputStream.close();
-            fs.close();
-            RefreshUtil.scanFile(IndexActivity.this, fileSavePath.getAbsolutePath());
-        } catch (IOException e) {
+        } catch (MyException e) {
             e.printStackTrace();
             throw new MyException(e.getMessage());
         }
     }
     
-    private void hideDialog() {
-        if (mProgressDialogFragment != null) {
-            mProgressDialogFragment.dismiss();
-        }
-        mProgressDialogFragment = null;
-    }
     
-    private void updateProgress(int progress) {
-        if (mProgressDialogFragment == null) {
-            createAndShowDialog();
-        }
-        mProgressDialogFragment.updateProgress(progress);
-    }
     
-    private void createAndShowDialog() {
-        mProgressDialogFragment = ProgressDialogFragment.newInstance();
-        mProgressDialogFragment.setCancelable(false);
-        mProgressDialogFragment.show(getSupportFragmentManager(), "");
-    }
     
-    public void downloadVideo(Video video, ObservableEmitter<Integer> observableEmitter) {
-        String originVideoAddress = video.getVideoAddress();
-        String title = video.getDesc();
-        String videoAddress1080 = originVideoAddress.replace("720p", "1080p");
+    public void downloadVideo(String awesomeUrl, ObservableEmitter<Integer> observableEmitter) {
+        JSONObject data = ParseUtil.getData(awesomeUrl);
+        
+        JSONObject awesomeInfo = ParseUtil.getAwesomeInfo(data);
         try {
-            if (ParseUtil.getContentLengthByAddress(videoAddress1080) > ParseUtil.getContentLengthByAddress(originVideoAddress)) {
-                download(videoAddress1080, title, observableEmitter);
-            } else {
-                download(originVideoAddress, title, observableEmitter);
-            }
+            download(awesomeInfo, observableEmitter);
         } catch (MyException e1) {
             observableEmitter.onError(e1);
         }
         observableEmitter.onComplete();
     }
     
-    private void download(String videoAddress, String title, ObservableEmitter<Integer> e) throws MyException {
+    private void downloadNote(String awesomeUrl, ObservableEmitter<Integer> observableEmitter) {
+        JSONObject data = ParseUtil.getData(awesomeUrl);
+        
+        JSONObject awesomeInfo = ParseUtil.getAwesomeInfo(data);
         try {
-            
-            Pattern pattern = Pattern.compile("[\\s\\\\/:\\*\\?\\\"<>\\|]");
-            Matcher matcher = pattern.matcher(title);
-            // 将匹配到的非法字符以空替换
-            title = matcher.replaceAll("");
-            Connection.Response document = Jsoup.connect(videoAddress).ignoreContentType(true).maxBodySize(0).timeout(0).execute();
+            downloadPic(awesomeInfo, observableEmitter);
+        } catch (MyException e) {
+            observableEmitter.onError(e);
+        }
+        observableEmitter.onComplete();
+    
+    }
+    
+    private void download(JSONObject awesomeInfo, ObservableEmitter<Integer> e) throws MyException {
+        JSONObject detail = awesomeInfo.getJSONObject("aweme").getJSONObject("detail");
+        String playApi = detail.getJSONObject("video").getStr("playApi");
+        String title = detail.getStr("desc");
+        playApi = "https:" + playApi;
+        try {
+            title = RegexUtil.replaceTitle(title);
+            Connection.Response document = Jsoup.connect(playApi).ignoreContentType(true).maxBodySize(0).timeout(0).execute();
             BufferedInputStream intputStream = document.bodyStream();
             int contentLength = Integer.parseInt(document.header("Content-Length"));
             File appDir = new File(Environment.getExternalStorageDirectory() + File.separator + Environment.DIRECTORY_DCIM + File.separator + "Camera" + File.separator);
             if (!appDir.exists()) {
-                appDir.mkdir();
+                appDir.mkdirs();
             }
             File fileSavePath = new File(appDir, title + ".mp4");
             // 如果保存文件夹不存在,那么则创建该文件夹
@@ -332,7 +269,7 @@ public class IndexActivity extends AppCompatActivity {
             }
             intputStream.close();
             fs.close();
-            RefreshUtil.scanFile(IndexActivity.this, fileSavePath.getAbsolutePath());
+            RefreshUtil.scanFile(MainActivity.this, fileSavePath.getAbsolutePath());
         } catch (Exception exception) {
             exception.printStackTrace();
             throw new MyException(exception.getMessage());

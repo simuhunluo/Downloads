@@ -1,23 +1,16 @@
 package com.mundane.downloads.util;
 
-import android.os.Environment;
-import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
-import com.mundane.downloads.dto.Pic;
-import com.mundane.downloads.dto.Video;
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.net.URLDecoder;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 
 /**
  * ParseUtil
@@ -28,16 +21,30 @@ import org.jsoup.nodes.Document;
 public class ParseUtil {
     
     public static Map<String, String> headers = new HashMap<String, String>() {{
-        put("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36");
-        put("pragma", "no-cache");
-        put("sec-ch-ua-platform", "\"Windows\"");
+        put("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36 Edg/110.0.1587.41");
+        put("origin", "https://www.douyin.com");
+        put("cookie", "douyin.com; ttwid=1|xGr-W8S6nxYr8EC7MefThD-nhaIC_-vftgO_sAVVkSI|1675694880|6b09f06b17e4d7021e91d397da634fc5ff00dee6e38f4f58c611f24d2867a366; home_can_add_dy_2_desktop=\"0\"; passport_csrf_token=1883f00e07c67356a0883dcf791cbe4e; passport_csrf_token_default=1883f00e07c67356a0883dcf791cbe4e; s_v_web_id=verify_ldsxgv8m_N2R5jJHS_KydI_4X8L_9407_jMMYLkeEwGpj; csrf_session_id=a1ef82e4c5c1bc3865bfff7ccd0a1d1a; douyin.com; bd_ticket_guard_client_data=eyJiZC10aWNrZXQtZ3VhcmQtdmVyc2lvbiI6MiwiYmQtdGlja2V0LWd1YXJkLWNsaWVudC1jc3IiOiItLS0tLUJFR0lOIENFUlRJRklDQVRFIFJFUVVFU1QtLS0tLVxyXG5NSUlCRGpDQnRRSUJBREFuTVFzd0NRWURWUVFHRXdKRFRqRVlNQllHQTFVRUF3d1BZbVJmZEdsamEyVjBYMmQxXHJcbllYSmtNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRFFnQUVPN2N6bWFlaytTYVFhREpQZU9rOGhyaGxcclxuRDAxM0FPQzRvM2FmZ3VjbW1kS3hjQ0Q3WUJHaUdxSDFtVTg3REQ4L1BSTHRMempXVnFuVklGeVkyaE13MmFBc1xyXG5NQ29HQ1NxR1NJYjNEUUVKRGpFZE1Cc3dHUVlEVlIwUkJCSXdFSUlPZDNkM0xtUnZkWGxwYmk1amIyMHdDZ1lJXHJcbktvWkl6ajBFQXdJRFNBQXdSUUlnVFphcHdQc0pQbVBsQlNValZlbHA0bVd0eVFMc3ZSazJodUIvUTd3UTZXY0NcclxuSVFETVdMOVRNc2V6V1lzSmxsd2x5a0xrOTBMMXdocHFrMWN3MTJrOTVrcHowUT09XHJcbi0tLS0tRU5EIENFUlRJRklDQVRFIFJFUVVFU1QtLS0tLVxyXG4ifQ==; AB_LOGIN_GUIDE_TIMESTAMP=\"1676374434423\"; VIDEO_FILTER_MEMO_SELECT={\"expireTime\":1677056810341,\"type\":1}; strategyABtestKey=\"1676452012.125\"; download_guide=\"3/20230215\"; msToken=tiVgoARXKveVfvKO3__fb5vuRL7coG6BJNz1tESfEsTFPsUpCuj4X__HTpMi-MuPjleExIjDEijPyQibSaCCVcoBiEKtZkmdUu9-l5skTrjxTTVXp3LyMpBP7A3Cvv4=; tt_scid=v2ClHiG.1.Hph1BRKBreQEKpgf9fB8w4eWj6Oe3xZig9gZZa8ioyxrtlOU2WOEov4117; msToken=7ieki6MFlKwZ7-phqPS5DvSpq2UuiHpnEXrFH22bdX0Oim2lZXDHuyy0IJAkVtns0vtzOWTTYyO_VLriLU6Ve_wNNvuGwtEtlXPAH2RxJO_319QKL8ynmTWGZr9bMFU=; __ac_nonce=063ecff1200dfc2e54816; __ac_signature=_02B4Z6wo00f01MpXGjQAAIDASlXgdPAe05zKdx6AAFF-Ch3Tv1EttX9IwAmOzUnVqlvJ28x.S82IRP4dZSi4o9ZS3fgw4aZkNchZhRt27OW8iw2J1sxlewx7d-8st6fkJx1EYtj3lhYQNxVH4c; __ac_referer=https://www.iesdouyin.com/");
     }};
     
-    public static Map<String, String> PC_HEADERS = new HashMap<String, String>() {{
-        put("sec-ch-ua-platform", "macOS");
-        put("sec-ch-ua-mobile", "?0");
-        put("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36");
-    }};
+    public static String getUserAgent() {
+        return headers.get("user-agent");
+    }
+    
+    public static String getPageInfo(Map<String, String> payload, String awesomeUrl) throws IOException {
+        headers.put("referer", awesomeUrl);
+        String pageUrl = "https://www.douyin.com/aweme/v1/web/aweme/post/";
+        
+        String body = Jsoup.connect(pageUrl)
+                .data(payload)
+                .headers(headers)
+                .method(Connection.Method.GET)
+                .ignoreContentType(true)
+                .execute()
+                .body();
+        
+        return body;
+    }
+    
     
     public static String parseUrl(String text) {
         String regex = "https://v.douyin.com[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]";
@@ -50,17 +57,14 @@ public class ParseUtil {
         return null;
     }
     
-    public static String parseVideoId(String url) {
+    
+    public static String getAwesomeUrl(String url) {
         try {
             Document document = Jsoup.connect(url).headers(headers).get();
             String location = document.location();
-            String regex = "\\d+";
-            Pattern pattern = Pattern.compile(regex);
-            Matcher matcher = pattern.matcher(location);
-            if (matcher.find()) {
-                String videoId = matcher.group();
-                return videoId;
-            }
+            document = Jsoup.connect(location).headers(headers).get();
+            location = document.location();
+            return location;
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -77,97 +81,7 @@ public class ParseUtil {
         return null;
     }
     
-    public static Video getVideo(String jsonStr, String videoId) {
-        JSONObject json = new JSONObject(jsonStr);
-        String videoAddress = json.getJSONArray("item_list").getJSONObject(0).getJSONObject("video").getJSONObject("play_addr").getJSONArray("url_list").get(0).toString();
-        Integer width = json.getJSONArray("item_list").getJSONObject(0).getJSONObject("video").getInt("width");
-        Integer height = json.getJSONArray("item_list").getJSONObject(0).getJSONObject("video").getInt("height");
-        if (videoAddress == null) {
-            return null;
-        }
-        videoAddress = videoAddress.replace("playwm", "play");
-        String desc = json.getJSONArray("item_list").getJSONObject(0).getStr("desc");
-        Video video = new Video();
-        video.setVideoAddress(videoAddress);
-        video.setDesc(desc);
-        video.setWidth(width);
-        video.setHeight(height);
-        video.setVideoId(videoId);
-        return video;
-    }
     
-    public static void downloadVideo(Video video) {
-        String originVideoAddress = video.getVideoAddress();
-        String desc = video.getDesc();
-        if (video.getWidth() > 720) {
-            String videoAddress1080 = originVideoAddress.replace("720p", "1080p");
-            if (!download(videoAddress1080, desc)) {
-                download(originVideoAddress, desc);
-            }
-        } else {
-            download(originVideoAddress, desc);
-        }
-    }
-    
-    private static boolean download(String videoAddress, String desc) {
-        try {
-            Connection.Response document = Jsoup.connect(videoAddress).ignoreContentType(true).maxBodySize(30000000).timeout(10000).execute();
-            BufferedInputStream intputStream = document.bodyStream();
-            int contentLength = Integer.parseInt(document.header("Content-Length"));
-            File appDir = new File(Environment.getExternalStorageDirectory() + File.separator + Environment.DIRECTORY_DCIM + File.separator + "Camera" + File.separator);
-            if (!appDir.exists()) {
-                appDir.mkdir();
-            }
-            File fileSavePath = new File(appDir, desc + ".mp4");
-            // 如果保存文件夹不存在,那么则创建该文件夹
-            File fileParent = fileSavePath.getParentFile();
-            if (!fileParent.exists()) {
-                fileParent.mkdirs();
-            }
-            if (fileSavePath.exists()) { //如果文件存在，则删除原来的文件
-                fileSavePath.delete();
-            }
-            FileOutputStream fs = new FileOutputStream(fileSavePath);
-            byte[] buffer = new byte[8 * 1024];
-            int byteRead;
-            int count = 0;
-            while ((byteRead = intputStream.read(buffer)) != -1) {
-                fs.write(buffer, 0, byteRead);
-                count += byteRead;
-                int progress = (int) (count * 100.0 / contentLength);
-            }
-            intputStream.close();
-            fs.close();
-            return true;
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-    
-    public static int getAwemeType(String jsonStr) {
-        JSONObject json = new JSONObject(jsonStr);
-        JSONArray itemList = json.getJSONArray("item_list");
-        JSONObject jsonObject = itemList.getJSONObject(0);
-        int awesomeType = jsonObject.getInt("aweme_type");
-        return awesomeType;
-    }
-    
-    public static Pic getPicList(String jsonStr) {
-        List<String> picList = new ArrayList<>();
-        
-        JSONObject json = new JSONObject(jsonStr);
-        JSONArray images = json.getJSONArray("item_list").getJSONObject(0).getJSONArray("images");
-        String desc = json.getJSONArray("item_list").getJSONObject(0).getStr("desc");
-        for (int i = 0; i < images.size(); i++) {
-            JSONObject jsonObject = images.getJSONObject(i);
-            JSONArray urlList = jsonObject.getJSONArray("url_list");
-            picList.add(urlList.get(0).toString());
-        }
-        Pic pic = new Pic(picList, desc);
-        
-        return pic;
-    }
     
     public static int getContentLengthByAddress(String videoAddress) {
         int contentLength = 0;
@@ -181,22 +95,51 @@ public class ParseUtil {
         return contentLength;
     }
     
-    public static String getSecUid(String url) {
+    
+    public static JSONObject getData(String awesomeUrl) {
         try {
-            Document document = Jsoup.connect(url).headers(headers).get();
-            String location = document.location();
-            String regex = "https://www.douyin.com/user/[-A-Za-z0-9+&@#/%=~_|!:,.;]+";
-            Pattern pattern = Pattern.compile(regex);
-            Matcher matcher = pattern.matcher(location);
-            if (matcher.find()) {
-                String secUrl = matcher.group();
-                return secUrl.replace("https://www.douyin.com/user/", "");
+            if (awesomeUrl.contains("?")) {
+                awesomeUrl = awesomeUrl.split("\\?")[0];
             }
-            
-            String body = Jsoup.connect(location).headers(PC_HEADERS).ignoreContentType(true).execute().body();
-            System.out.println(body);
+            headers.put("referer", "https://www.iesdouyin.com/");
+            Document document = Jsoup
+                    .connect(awesomeUrl)
+                    .headers(headers)
+                    .ignoreContentType(true)
+                    .get();
+            Element element = document.selectFirst("script#RENDER_DATA[type=application/json]");
+            String html = element.html();
+            String decodedStr = URLDecoder.decode(html, "UTF-8");
+            JSONObject json = new JSONObject(decodedStr);
+            return json;
         } catch (IOException e) {
             e.printStackTrace();
+        }
+        return null;
+    }
+    
+    public static JSONObject getAwesomeInfo(JSONObject data) {
+        for (Map.Entry<String, Object> entry : data.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof JSONObject) {
+                JSONObject obj = (JSONObject) value;
+                if (obj.containsKey("aweme")) {
+                    return obj;
+                }
+            }
+        }
+        return null;
+    }
+    
+    public static JSONObject getPostInfo(JSONObject data) {
+        for (Map.Entry<String, Object> entry : data.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof JSONObject) {
+                JSONObject obj = (JSONObject) value;
+                if (obj.containsKey("post")) {
+                    return obj;
+                }
+            }
         }
         return null;
     }

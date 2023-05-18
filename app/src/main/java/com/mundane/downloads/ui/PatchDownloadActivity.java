@@ -28,7 +28,7 @@ public class PatchDownloadActivity extends AppCompatActivity {
     private EditText mEtUserPage;
     private LoadingDialogFragment mLoadingDialogFragment;
     
-    private static final String SEC_UID = "JSON_INFO";
+    private static final String AWESOME_URL = "AWESOME_URL";
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,12 +75,12 @@ public class PatchDownloadActivity extends AppCompatActivity {
                     e.onError(new MyException("url is null"));
                     return;
                 }
-                String secUid = ParseUtil.getSecUid(url);
-                if (secUid == null) {
-                    e.onError(new MyException("secUid is null"));
+                String awesomeUrl = ParseUtil.getAwesomeUrl(url);
+                if (awesomeUrl == null) {
+                    e.onError(new MyException("awesomeUrl is null"));
                     return;
                 }
-                e.onNext(secUid);
+                e.onNext(awesomeUrl);
                 e.onComplete();
             }
         }).subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(new Observer<String>() {
@@ -94,10 +94,10 @@ public class PatchDownloadActivity extends AppCompatActivity {
             }
             
             @Override
-            public void onNext(String secUid) {
+            public void onNext(String awesomeUrl) {
                 LogUtils.d("currentThread = " + Thread.currentThread().getName());
                 // “主线程”执行的方法
-                openList(secUid);
+                openList(awesomeUrl);
             }
             
             @Override
@@ -116,15 +116,15 @@ public class PatchDownloadActivity extends AppCompatActivity {
         });
     }
     
-    private void openList(String secUid) {
+    private void openList(String awesomeUrl) {
         Intent intent = new Intent(this, JsonListActivity.class);
-        intent.putExtra(SEC_UID, secUid);
+        intent.putExtra(AWESOME_URL, awesomeUrl);
         startActivity(intent);
     }
     
-    public static String getSecUidFromIntent(Intent intent) {
-        String secUid = (String) intent.getSerializableExtra(SEC_UID);
-        return secUid;
+    public static String getAwesomeUrlFromIntent(Intent intent) {
+        String awesomeUrl = (String) intent.getSerializableExtra(AWESOME_URL);
+        return awesomeUrl;
     }
     
     private void hideDialog() {
