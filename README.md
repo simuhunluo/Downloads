@@ -2,11 +2,11 @@
 
 ### 简介
 
-一款可以下载无水印抖音视频/图片的安卓app
+一款可以下载抖音无水印视频/图片的安卓app
 
 ### apk下载
 
-https://wwbl.lanzout.com/b03p8kx6b  
+https://wwbl.lanzout.com/b03p8kx6b
 密码:8888
 
 ### 功能特色
