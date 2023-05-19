@@ -285,7 +285,7 @@ public class JsonListActivity extends AppCompatActivity {
             if (images.isEmpty()) { // 视频
                 String playApi = "https:" + video.getStr("playApi");
                 douyinDataBean.playApi = playApi;
-            } else if (douyinDataBean.awemeType == 68) { // 图片
+            } else { // 图片
                 List<String> imageList = new ArrayList<>();
                 for (Object o1 : images) {
                     JSONObject image = (JSONObject) o1;
