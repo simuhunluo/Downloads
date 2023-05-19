@@ -52,9 +52,10 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 >
+
                 <TextView
-                    android:id="@+id/tv_author"
-                    android:text="一名渴望自由的程序员\n\n欢迎技术人员加我微信, 与我交流技术和独立开发相关(长按保存微信名片)"
+                    android:textIsSelectable="true"
+                    android:text="本项目为开源项目, 禁止用于商业用途\n\n项目地址:\n\nhttps://github.com/mundane799699/Downloads"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="10dp"
@@ -62,20 +63,40 @@
                     android:textSize="16sp"
                     />
 
-                <ImageView
-                    android:id="@+id/iv_author_wx"
-                    android:layout_gravity="center_horizontal"
-                    android:src="@drawable/author_wx"
-                    android:layout_width="300dp"
-                    android:layout_height="300dp"
-                    />
+
 
             </LinearLayout>
         </android.support.v7.widget.CardView>
 
         <android.support.v7.widget.CardView
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:gravity="center_vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/colorCard"
+            app:cardCornerRadius="2dp"
+            app:cardElevation="2dp"
+            app:contentPadding="3dp"
+            >
+
+            <TextView
+                android:layout_margin="10dp"
+                android:textIsSelectable="true"
+                android:id="@+id/tv_author"
+                android:text="产品问题请发邮件至799699348@qq.com"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="10dp"
+                android:textColor="@color/colorText"
+                android:textSize="16sp"
+                />
+
+        </android.support.v7.widget.CardView>
+
+        <android.support.v7.widget.CardView
             android:id="@+id/cv_reward"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="10dp"
             android:layout_marginLeft="10dp"
             android:layout_marginRight="10dp"
             android:gravity="center_vertical"
@@ -88,7 +109,7 @@
 
             <TextView
                 android:textColor="@color/colorText"
-                android:text="打赏我"
+                android:text="请我喝杯咖啡"
                 android:textStyle="bold"
                 android:padding="10dp"
                 android:textSize="20sp"
